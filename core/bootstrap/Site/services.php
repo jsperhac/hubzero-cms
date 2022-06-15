@@ -14,6 +14,7 @@ return array(
 	'Bootstrap\Site\Providers\PluginServiceProvider',
 	'Bootstrap\Site\Providers\ProfilerServiceProvider',
 	'Bootstrap\Site\Providers\LogServiceProvider',
+	'Bootstrap\Site\Providers\SocketLogServiceProvider',
 	'Bootstrap\Site\Providers\RouterServiceProvider',
 	'Bootstrap\Site\Providers\FilesystemServiceProvider',
 	// Site-specific services

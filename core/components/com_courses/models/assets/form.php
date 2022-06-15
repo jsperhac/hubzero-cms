@@ -121,7 +121,7 @@ class Form extends Content
 					href: '/courses/".$gid."/".$oid."/form.layout?formId=".$id."&tmpl=component',
 					afterLoad: function() {
 						var iframe = $('.fancybox-iframe');
-						iframe.on('load',function() {
+						iframe.load(function() {
 							var frameContents = $('.fancybox-iframe').contents();
 
 							var navHeight = frameContents.find('.navbar').height();

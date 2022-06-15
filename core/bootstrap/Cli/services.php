@@ -14,6 +14,7 @@ return array(
 	'Bootstrap\Cli\Providers\PluginServiceProvider',
 	'Bootstrap\Cli\Providers\ProfilerServiceProvider',
 	'Bootstrap\Cli\Providers\LogServiceProvider',
+	'Bootstrap\Cli\Providers\SocketLogServiceProvider',
 	'Bootstrap\Cli\Providers\RouterServiceProvider',
 	'Bootstrap\Cli\Providers\FilesystemServiceProvider',
 	// CLI-specific services

@@ -315,7 +315,7 @@ class Entry extends Relational implements \Hubzero\Search\Searchable
 	 *
 	 * @return  string
 	 */
-	public function authorsList($solr=false)
+	public function authorsList()
 	{
 		$names = array();
 
@@ -330,10 +330,7 @@ class Entry extends Relational implements \Hubzero\Search\Searchable
 			$name = htmlentities($contributor->name);
 			if ($contributor->get('authorid') > 0)
 			{
-				if (!$solr)
-				{
-					$name = '<a href="' . Route::url('index.php?option=com_members&id=' . $contributor->get('authorid')) . '" data-rel="contributor" class="resource-contributor" title="View the profile of ' . $name . '">' . $name . '</a>';
-				}
+				$name = '<a href="' . Route::url('index.php?option=com_members&id=' . $contributor->get('authorid')) . '" data-rel="contributor" class="resource-contributor" title="View the profile of ' . $name . '">' . $name . '</a>';
 			}
 			if ($contributor->get('role'))
 			{
@@ -1688,7 +1685,10 @@ class Entry extends Relational implements \Hubzero\Search\Searchable
 		$obj->publish_up = Date::of($this->get('publish_up'))->format($solrDateFormat);
 		$obj->description = $this->searchableDescription();
 		$obj->author = $this
-			->authorsList(true);
+			->authors()
+			->select('name')
+			->rows()
+			->fieldsbyKey('name');
 
 		$obj->access_level = $this->access_level;
 		$groups = $this->getGroups();

@@ -172,6 +172,12 @@ class plgSystemHubzero extends \Hubzero\Plugin\Plugin
 			->logger('auth')
 			->info((isset($_POST['username']) ? $_POST['username'] : '[unknown]') . ' ' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . ' invalid');
 
+		// JMS trying stuff...
+		// this is to verify we can, propose another plugin be used for real.
+		//App::get('socket-log')
+		//	->logger('auth')
+		//	->info((isset($_POST['username']) ? $_POST['username'] : '[unknown]') . ' ' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . ' invalid');
+
 		if (strpos(php_sapi_name(), 'apache') !== false && function_exists('apache_note'))
 		{
 			apache_note('auth', 'invalid');

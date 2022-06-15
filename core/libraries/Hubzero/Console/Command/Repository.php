@@ -604,37 +604,10 @@ class Repository extends Base implements CommandInterface
 		$sourceUrl = $this->arguments->getOpt('sourceUrl');
 		$repoPath = $this->arguments->getOpt('repoPath');
 
-		$command  = "umask 0002 && git clone" . " " . $sourceUrl . " " . $repoPath . ' 2>&1';
+		$command  = "git clone" . " " . $sourceUrl . " " . $repoPath . ' 2>&1';
 		$response = shell_exec($command);
 
 		$this->output->addLine($response);
-	}
-
-	/**
-	 * Call updateGitURLconf
-	 *
-	 * @museDescription  Updates the specified remote origin of the specified repository.
-	 *
-	 * @return void
-	 **/
-	public function updateGitURLconf()
-	{
-		$newsourceUrl = $this->arguments->getOpt('newsourceUrl');
-		$repoPath = $this->arguments->getOpt('repoPath');
-
-		$newsourceUrl_command  = "cd " . $repoPath . " && git remote set-url origin " . $newsourceUrl . ' 2>&1';
-		$newsourceUrl_command_response = shell_exec($newsourceUrl_command);
-		$this->output->addLine($newsourceUrl_command_response);
-
-		//check if new token is valid.
-		$lsremote_command  = "cd " . $repoPath . " && git ls-remote" . ' 2>&1';
-		$lsremote_command_response = shell_exec($lsremote_command);
-
-		if (preg_match("/fatal: Authentication failed.../uis", $lsremote_command_response))
-		{
-			$output = array(Lang::txt("Authentication failure. Please check the specified Access Token has access to this extension's repository."));
-			$this->output->addLine($output);
-		}
 	}
 
 	/**
@@ -647,31 +620,18 @@ class Repository extends Base implements CommandInterface
 	 **/
 	public function checkoutRepoBranch()
 	{
-		$repoPath = $this->arguments->getOpt('repoPath');
-
-		if ($this->arguments->getOpt('git_branch'))
-		{
 		$git_branch_arr = explode("/", $this->arguments->getOpt('git_branch'));
 		$git_branch = $git_branch_arr[1];
-	}
-	else
-	{
-		// get default remote
-		$default_remote = shell_exec("umask 0002 && cd " . $repoPath . " && git remote show");
-		// get remote default branch
-		$default_remote_branch_cmd = "git remote show " . trim($default_remote) . " | grep 'HEAD branch' | cut -d ':' -f 2";
-		$git_branch = shell_exec("umask 0002 && cd " . $repoPath . " && ". $default_remote_branch_cmd);
-	}
+		$repoPath = $this->arguments->getOpt('repoPath');
 
 		$cur_branch = "git rev-parse --abbrev-ref HEAD";
-		// Get current branch
-		$command  = "umask 0002 && cd " . $repoPath . " && git rev-parse --abbrev-ref HEAD";
+		$command  = "cd " . $repoPath . " && git rev-parse --abbrev-ref HEAD";
 		$cur_branch = shell_exec($command);
 
 		// If the current branch doesn't match the specified branch, the checkout the specified branch
 		if ($cur_branch != $git_branch)
 		{
-			$command  = "umask 0002 && cd " . $repoPath . " && git stash -q && git checkout " . $git_branch;
+			$command  = "cd " . $repoPath . " && git stash -q && git checkout " . $git_branch . " -q";
 			$response = shell_exec($command);
 		}
 		$this->output->addLine($response);

@@ -46,7 +46,7 @@ class LogServiceProvider extends ServiceProvider
 			$manager->register('auth', array(
 				'file'       => 'cmsauth.log',
 				'level'      => 'info',
-				'format'     => "%datetime% %message%\n",
+				'format'     => "%datetime% [admin-cms-userlogin] %message%\n",
 				'dispatcher' => $dispatcher
 			));
 

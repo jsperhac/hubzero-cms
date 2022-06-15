@@ -54,8 +54,6 @@ if ($this->model->introtext)
 	Document::setDescription(strip_tags($this->model->introtext));
 }
 
-$tab = Request::getCmd('active', 'about');  // The active tab (section)
-
 // Check if there's anything left in the fulltxt after removing custom fields
 // If not, set it to the introtext
 $maintext = $this->model->description;
@@ -136,12 +134,12 @@ $maintext = $this->model->description;
 						{
 							$citations = $data[$field->name];
 						}
-						else if ($elements->display($field->type, $data[$field->name]) && $field->display == $tab )
+						else if ($value = $elements->display($field->type, $data[$field->name]))
 						{
 							?>
 							<h4><?php echo $field->label; ?></h4>
 							<div class="resource-content">
-								<?php echo $elements->display($field->type, $data[$field->name]); ?>
+								<?php echo $value; ?>
 							</div>
 							<?php
 						}

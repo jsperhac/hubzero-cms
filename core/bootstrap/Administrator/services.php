@@ -14,6 +14,7 @@ return array(
 	'Bootstrap\Administrator\Providers\PluginServiceProvider',
 	'Bootstrap\Administrator\Providers\ProfilerServiceProvider',
 	'Bootstrap\Administrator\Providers\LogServiceProvider',
+	'Bootstrap\Administrator\Providers\SocketLogServiceProvider',
 	'Bootstrap\Administrator\Providers\RouterServiceProvider',
 	'Bootstrap\Administrator\Providers\FilesystemServiceProvider',
 	// Admin-specific services

@@ -9,6 +9,7 @@ namespace Hubzero\Session\Storage;
 
 use Hubzero\Session\Store;
 use Exception;
+use Event;
 
 /**
  * Database session storage handler
@@ -154,6 +155,7 @@ class Database extends Store
 
 	/**
 	 * Destroy the data for a particular session identifier in the SessionHandler backend.
+	 * This is called, for example, when a user logs out of the site.
 	 *
 	 * @param   string   $id  The session identifier.
 	 * @return  boolean  True on success, false otherwise.
@@ -168,12 +170,32 @@ class Database extends Store
 
 		try
 		{
+			// JMS experiment only:
+			// JMS get the session object with the username, put in an array
+			// this works to log the session:
+			/*
+			$session_info = $this->session($session_id);
+			$user = array('username' => $session_info->username,
+				  'userid'   => $session_info->userid,
+				  'time'   => $session_info->time);
+		    */
+
 			$query = $this->connection->getQuery()
 				->delete('#__session')
 				->whereEquals('session_id', $session_id);
 
 			// Remove a session from the database.
 			$this->connection->setQuery($query->toString());
+
+			// JMS experiment only:
+			// JMS trigger the timeout event in the user plugin:
+			// this works to log the session:
+			//\Event::trigger('user.onUserSessionTimeout', array($user));
+
+			// JMS experiment only:
+			// JMS: now try to invoke gc() from here, for testing:
+			//$this->gc(10);
+			//\Event::trigger('user.onUserSessionGCCalled', array(999));
 
 			return (boolean) $this->connection->execute();
 		}
@@ -199,9 +221,37 @@ class Database extends Store
 
 		// Determine the timestamp threshold with which to purge old sessions.
 		$past = time() - $lifetime;
+		//dump($past);
+
+		// JMS test
+		// test the brakes: JMS
+		\Event::trigger('user.onUserSessionGCCalled', array($past));
+		//$testarr = array($past);
+		//ddie($testarr[0]);
 
 		try
 		{
+			// JMS: first, query for the array of expired sessions:
+			// could be improved by getting list of sessions once, note that delete below
+			// re-runs the time query
+			$session_info = $this->sessionTimeouts($past);
+			//dump($session_info);
+
+			// JMS: place entry in log for each user (non guest) session that has expired:
+			//$NOT_GUEST = 0;
+			//$expiring[];
+			foreach ($session_info as $session)
+			{
+				$user = [];
+				$user = array('username' => $session->username,
+				  'userid'   => $session->userid,
+				  'time'   => $session->time);
+
+				  //ddie($user);
+				  \Event::trigger('user.onUserSessionTimeout', array($user));
+			}
+
+			// prepare to delete these sessions from the database:
 			$query = $this->connection->getQuery()
 				->delete('#__session')
 				->where('time', '<', (int) $past);
@@ -211,10 +261,39 @@ class Database extends Store
 
 			return (boolean) $this->connection->execute();
 		}
-		catch (Exception $e)
+			catch (Exception $e)
 		{
 			return false;
 		}
+	}
+
+	/**
+	 * Get list of all user sessions that have timed out
+	 *
+	 * @param   integer  $threshold 	unix time when session timed out
+	 * @return  array
+	 */
+	public function sessionTimeouts($threshold)
+	{
+		$query = $this->connection->getQuery()
+			->select('userid')
+			->select('username')
+			->select('time')
+			->from('#__session')
+			->whereEquals('guest', 0)
+			->where('time', '<', (int) $threshold);
+
+			/*->select('session_id')
+			->select('userid')
+			->select('username')
+			->select('time')
+			->select('guest')
+			->from('#__session')
+			->whereEquals('guest', 0)
+			->where('time', '<', (int) $threshold);
+			*/
+		$this->connection->setQuery($query->toString());
+		return $this->connection->loadObjectList();
 	}
 
 	/**

@@ -90,6 +90,11 @@ class plgUserXusers extends \Hubzero\Plugin\Plugin
 		// log login to auth log
 		Log::auth($xuser->get('id') . ' [' . $xuser->get('username') . '] ' . $_SERVER['REMOTE_ADDR'] . ' login');
 
+		// JMS messing around: successful login
+		//App::get('socket-log')
+		//	->logger('auth')
+		//	->info($xuser->get('id') . ' [' . $xuser->get('username') . '] ' . $_SERVER['REMOTE_ADDR'] . ' login');
+
 		// correct apache log data
 		if (function_exists('apache_note'))
 		{
@@ -669,6 +674,11 @@ class plgUserXusers extends \Hubzero\Plugin\Plugin
 	public function onLogoutUser($user, $options = array())
 	{
 		Log::auth($user['username'] . ' ' . $_SERVER['REMOTE_ADDR'] . ' logout');
+
+		// JMS messing around: successful logout
+		//App::get('socket-log')
+		//	->logger('auth')
+		//	->info($user->get('id') . ' [' . $user->get('username') . '] ' . $_SERVER['REMOTE_ADDR'] . ' logout');
 
 		if (function_exists('apache_note'))
 		{

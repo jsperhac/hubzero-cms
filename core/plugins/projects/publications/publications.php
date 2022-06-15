@@ -2210,10 +2210,8 @@ class plgProjectsPublications extends \Hubzero\Plugin\Plugin
 			}
 		}
 
-		$updateDoiMetadata = ($pub->version->doi ? preg_match("/" . $doiService->configs()->shoulder . "/", $pub->version->doi) : false);
-
 		// When dataset is automatically approved.
-		if (!$review && ($autoApprove || $this->_pubconfig->get('autoapprove') == 1) && $updateDoiMetadata)
+		if (!$review && ($autoApprove || $this->_pubconfig->get('autoapprove') == 1) && $pub->version->get('doi'))
 		{
 			// Update DOI metadata
 			$doiService->update($pub->version->get('doi'), true);
@@ -2236,7 +2234,7 @@ class plgProjectsPublications extends \Hubzero\Plugin\Plugin
 			}
 		}
 
-		if ($this->_task == 'revert' && $updateDoiMetadata && $originalStatus == 1)
+		if ($this->_task == 'revert' && $pub->version->doi && $originalStatus == 1)
 		{
 			$doiService->revert($pub->version->doi, $doiService::STATE_FROM_PUBLISHED_TO_DRAFTREADY);
 
@@ -2247,7 +2245,7 @@ class plgProjectsPublications extends \Hubzero\Plugin\Plugin
 			}
 		}
 
-		if ($this->_task == 'publish' && $updateDoiMetadata && $originalStatus == 4)
+		if ($this->_task == 'publish' && $pub->version->doi && $originalStatus == 4)
 		{
 			$doiService->revert($pub->version->doi, $doiService::STATE_FROM_DRAFTREADY_TO_PUBLISHED);
 

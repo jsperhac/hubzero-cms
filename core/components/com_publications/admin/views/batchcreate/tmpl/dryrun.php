@@ -84,7 +84,6 @@ $skipFields = array('license_type', 'state', 'main', 'secret', 'access');
 							<thead>
 							<tr>
 								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_TYPE'); ?></th>
-								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_SUBTYPE'); ?></th>
 								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_FILE_PATH'); ?></th>
 								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_TITLE'); ?></th>
 							</tr>
@@ -94,32 +93,8 @@ $skipFields = array('license_type', 'state', 'main', 'secret', 'access');
 								<?php foreach ($item['files'] as $filerecord) { ?>
 									<tr<?php if ($filerecord['error']) { echo ' class="missing"'; } ?>>
 										<td><?php echo $filerecord['type']; ?></td>
-										<td><?php echo $filerecord['subtype']; ?></td>
 										<td><?php echo $filerecord['error'] ? ' <span class="block prominent">' . $filerecord['error'] . '</span>' : ''; ?><?php echo $filerecord['attachment']->path; ?></td>
 										<td><?php echo $filerecord['attachment']->title; ?></td>
-									</tr>
-								<?php } ?>
-							<?php } ?>
-							</tbody>
-						</table>
-					</td>
-				</tr>
-				<tr>
-					<td class="key"><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_METADATA'); ?></td>
-					<td>
-						<table class="filelist">
-							<thead>
-							<tr>
-								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_ALIAS'); ?></th>
-								<th><?php echo Lang::txt('COM_PUBLICATIONS_FIELD_TEXT'); ?></th>
-							</tr>
-							</thead>
-							<tbody>
-							<?php if (!empty($item['metadata'])) { ?>
-								<?php foreach ($item['metadata'] as $alias => $text) { ?>
-									<tr>
-										<td><?php echo $alias; ?></td>
-										<td><?php echo htmlspecialchars($text, ENT_COMPAT); ?></td>
 									</tr>
 								<?php } ?>
 							<?php } ?>

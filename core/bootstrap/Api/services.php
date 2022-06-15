@@ -14,6 +14,7 @@ return array(
 	'Bootstrap\Api\Providers\PluginServiceProvider',
 	//'Bootstrap\Api\Providers\ProfilerServiceProvider',
 	'Bootstrap\Api\Providers\LogServiceProvider',
+	'Bootstrap\Api\Providers\SocketLogServiceProvider',
 	'Bootstrap\Api\Providers\RouterServiceProvider',
 	'Bootstrap\Api\Providers\FilesystemServiceProvider',
 	// API-specific services

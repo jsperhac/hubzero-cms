@@ -125,14 +125,7 @@ class Response extends BaseResponse
 				$output .= Xml::encode($content);
 			break;
 			case 'application/json':
-				if (!is_object($content) && !is_array($content))
-				{
-					$output = $content;
-				}
-				else
-				{
-					$output .= json_encode($content);
-				}
+				$output .= json_encode($content);
 			break;
 			case 'application/javascript':
 				$output .= $content;

@@ -5,7 +5,7 @@
  * @license    http://opensource.org/licenses/MIT MIT
  */
 
-namespace Bootstrap\Site\Providers;
+namespace Bootstrap\Api\Providers;
 
 use Hubzero\Log\Manager;
 use Hubzero\Base\ServiceProvider;
@@ -13,7 +13,7 @@ use Hubzero\Base\ServiceProvider;
 /**
  * Event service provider
  */
-class LogServiceProvider extends ServiceProvider
+class SocketLogServiceProvider extends ServiceProvider
 {
 	/**
 	 * Register the service provider.
@@ -22,14 +22,16 @@ class LogServiceProvider extends ServiceProvider
 	 */
 	public function register()
 	{
-		$this->app['log'] = function($app)
+		// JMS
+		$this->app['socket-log'] = function($app)
 		{
 			$path = $app['config']->get('log_path');
-			if (is_dir('/var/log/hubzero'))
+			// JMS
+			if (is_dir('/dev/log'))
 			{
-				$path = '/var/log/hubzero';
+				// JMS
+				$path = '/dev/log';
 			}
-			//$path = '/tmp';
 
 			$dispatcher = null;
 			if ($app->has('dispatcher'))
@@ -45,9 +47,9 @@ class LogServiceProvider extends ServiceProvider
 			));
 
 			$manager->register('auth', array(
-				'file'       => 'cmsauth.log',
+				'file'       => 'cmsauth.sock',
 				'level'      => 'info',
-				'format'     => "%datetime% [site-cms-userlogin] %message%\n",
+				'format'     => "%datetime% [api] %message%\n",
 				'dispatcher' => $dispatcher
 			));
 

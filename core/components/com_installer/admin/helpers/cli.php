@@ -196,7 +196,7 @@ class Cli
 	 * @param   array   $args  the command arguments
 	 * @return  string
 	 **/
-	public static function call($cmd, $task='repository', $args=array())
+	private static function call($cmd, $task='repository', $args=array())
 	{
 		static $user = null;
 		static $processUser = null;

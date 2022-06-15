@@ -13,14 +13,18 @@ $name = $this->license->name;
 if (substr($name, 0, 6) != 'custom')
 {
 	?>
+	<p class="<?php echo $name; ?> license">
 		<?php if ($this->license->url) { ?>
-			<a target='_blank' rel="noopener noreferrer license" href="<?php echo $this->license->url; ?>" title="<?php echo $this->escape($this->license->title); ?>"><p class="<?php echo $name; ?> license"></p></a>
+			Licensed according to <a rel="license" href="<?php echo $this->license->url; ?>" title="<?php echo $this->escape($this->license->title); ?>">this deed</a>.
 		<?php } else { ?>
-			<p class="<?php echo $name; ?> license"></p>
+			Licensed under <?php echo $this->license->title; ?>
 		<?php } ?>
+	</p>
 	<?php
 } else {
 	?>
-		<a target='_blank' rel="noopener noreferrer license" class="popup" href="<?php echo Route::url('index.php?option=com_resources&task=license&resource=' . substr($name, 6) . '&no_html=1'); ?>"><p class="<?php echo $name; ?> license"></p></a>
+	<p class="<?php echo $name; ?> license">
+		Licensed according to <a rel="license" class="popup" href="<?php echo Route::url('index.php?option=com_resources&task=license&resource=' . substr($name, 6) . '&no_html=1'); ?>">this deed</a>.
+	</p>
 	<?php
 }
