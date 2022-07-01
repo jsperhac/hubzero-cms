@@ -170,15 +170,10 @@ class Database extends Store
 
 		try
 		{
-			// JMS experiment only:
-			// JMS get the session object with the username, put in an array
-			// this works to log the session:
-			/*
-			$session_info = $this->session($session_id);
-			$user = array('username' => $session_info->username,
-				  'userid'   => $session_info->userid,
-				  'time'   => $session_info->time);
-		    */
+			// JMS testing stuff
+			//dump(array('test log session timeouts'));
+			//$timeout_count = $this->_logSessionTimeouts(99999999999);
+			//dump(array($timeout_count));
 
 			$query = $this->connection->getQuery()
 				->delete('#__session')
@@ -186,16 +181,6 @@ class Database extends Store
 
 			// Remove a session from the database.
 			$this->connection->setQuery($query->toString());
-
-			// JMS experiment only:
-			// JMS trigger the timeout event in the user plugin:
-			// this works to log the session:
-			//\Event::trigger('user.onUserSessionTimeout', array($user));
-
-			// JMS experiment only:
-			// JMS: now try to invoke gc() from here, for testing:
-			//$this->gc(10);
-			//\Event::trigger('user.onUserSessionGCCalled', array(999));
 
 			return (boolean) $this->connection->execute();
 		}
@@ -221,35 +206,16 @@ class Database extends Store
 
 		// Determine the timestamp threshold with which to purge old sessions.
 		$past = time() - $lifetime;
-		//dump($past);
+		//dump(array($past,'lifetime'=>date($lifetime),'time'=>time()));
 
-		// JMS test
-		// test the brakes: JMS
-		\Event::trigger('user.onUserSessionGCCalled', array($past));
-		//$testarr = array($past);
-		//ddie($testarr[0]);
+		// JMS: test the brakes:
+		//\Event::trigger('user.onUserSessionGCCalled', array($past));
 
 		try
 		{
-			// JMS: first, query for the array of expired sessions:
-			// could be improved by getting list of sessions once, note that delete below
-			// re-runs the time query
-			$session_info = $this->sessionTimeouts($past);
-			//dump($session_info);
-
-			// JMS: place entry in log for each user (non guest) session that has expired:
-			//$NOT_GUEST = 0;
-			//$expiring[];
-			foreach ($session_info as $session)
-			{
-				$user = [];
-				$user = array('username' => $session->username,
-				  'userid'   => $session->userid,
-				  'time'   => $session->time);
-
-				  //ddie($user);
-				  \Event::trigger('user.onUserSessionTimeout', array($user));
-			}
+			// JMS: log user sessions that have timed out:
+			$timeout_count = $this->_logSessionTimeouts($past);
+			//dump(array($timeout_count));
 
 			// prepare to delete these sessions from the database:
 			$query = $this->connection->getQuery()
@@ -261,19 +227,54 @@ class Database extends Store
 
 			return (boolean) $this->connection->execute();
 		}
-			catch (Exception $e)
+		catch (Exception $e)
 		{
 			return false;
 		}
 	}
 
+
 	/**
-	 * Get list of all user sessions that have timed out
+	 * Log all user sessions that have timed out, per JMS
+	 *
+	 * @param   int 	$past 	unix time when session timed out
+	 * @return  int 	$session_count	count of sessions timed out
+	 */
+	private function _logSessionTimeouts($past)
+	{
+		// This should be an array of objects:
+		$session_info = $this->_sessionTimeouts($past);
+		// how many objects in the array?
+		$session_count = count($session_info);
+
+		if ($session_count > 0)
+		{
+			//dump($session_info);
+
+			// JMS: place entry in log for each user (non guest) session that has expired:
+			// each object represents one user session
+			foreach ($session_info as $session)
+			{
+				$user = [];
+				$user = array('username' => $session->username,
+				  'userid'   => $session->userid,
+				  'time'   => $session->time);
+
+				  // ??? not getting written?
+				  //dump(array($user));
+				  \Event::trigger('user.onUserSessionTimeout', array($user));
+			}
+		}
+		return $session_count;
+	}
+
+	/**
+	 * Get list of all user sessions that have timed out, per JMS
 	 *
 	 * @param   integer  $threshold 	unix time when session timed out
 	 * @return  array
 	 */
-	public function sessionTimeouts($threshold)
+	private function _sessionTimeouts($threshold)
 	{
 		$query = $this->connection->getQuery()
 			->select('userid')
