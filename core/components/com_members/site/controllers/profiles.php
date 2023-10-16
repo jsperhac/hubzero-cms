@@ -13,6 +13,7 @@ use Components\Members\Models\Profile\Field;
 use Components\Members\Models\Profile;
 use Components\Members\Models\Member;
 use Components\Members\Helpers\Filters;
+use Components\Search\Models\Solr\SearchComponent;
 use Component;
 use Document;
 use Pathway;
@@ -26,6 +27,10 @@ use Lang;
 use User;
 use Date;
 use App;
+
+$searchComponentPath = Component::path('com_search');
+
+include_once dirname(dirname(__DIR__)) . DS . '../com_search' . DS . 'models' . DS . 'solr'. DS .'searchcomponent.php';
 
 include_once dirname(dirname(__DIR__)) . DS . 'models' . DS . 'registration.php';
 include_once dirname(dirname(__DIR__)) . DS . 'models' . DS . 'member.php';
@@ -266,11 +271,344 @@ class Profiles extends SiteController
 	}
 
 	/**
-	 * Display a list of members
+	 * Display a list of members, incorporating solr for search
+	 * Compare to com_search/site/controllers/solr.php displayTask()
+	 * 
+	 * NEW BROWSE TASK
 	 *
 	 * @return  void
 	 */
 	public function browseTask()
+	{
+		// from Solr displayTask()
+		// This is a stdClass containing solr config info.
+		$config = Component::params('com_search');
+		$query = new \Hubzero\Search\Query($config);
+		//$memberNamespace = \Components\Members\Models\Member::searchNamespace();
+
+		// govern the search start and total count:
+		$limitstart = Request::getString('limitstart');
+		$limit = Request::getString('limit');
+
+		// Get all the fields we can use on this page, from jos_user_profile_fields table
+		$fields = Field::all()
+			->whereIn('action_browse', User::getAuthorisedViewLevels())
+			->where('type', '!=', 'tags')
+			->ordered()
+			->rows();
+
+		$q = (array)Request::getArray('q', array());
+
+		$filters = array(
+			'search'   => Request::getString('search', ''),
+			'q'        => array(),
+			'tags'     => Request::getString('tags', ''),
+			'sort'     => strtolower(Request::getWord('sort', 'name')),
+			'sort_Dir' => strtolower(Request::getWord('sort_Dir', 'asc'))
+		);
+
+		// If we have a search and it's not an array (i.e. it's coming in fresh with this request)
+		if ($filters['search'])
+		{
+			$q[] = array(
+				'field'    => 'search',
+				'human_field' => Lang::txt('COM_MEMBERS_SEARCH'),
+				'operator' => 'like', // TODO: update for solr
+				'value'    => $filters['search']
+			);
+		}
+
+		// Make sure sort direction is valid
+		if (!in_array($filters['sort_Dir'], array('asc', 'desc')))
+		{
+			$filters['sort_Dir'] = 'asc';
+		}
+
+		// TODO: map available fields to things we can sort in solr
+		// Make sure sort value is valid
+		$searches = array();
+		$fieldnames = array('surname', 'name');
+		foreach ($fields as $field)
+		{
+			if (in_array($field->get('type'), array('text', 'textarea', 'orcid', 'address')))
+			{
+				$searches[] = $field->get('name');
+			}
+			$fieldnames[] = $field->get('name');
+		}
+
+		if (!in_array($filters['sort'], $fieldnames))
+		{
+			$filters['sort'] = 'name';
+		}
+
+		// TODO: update for solr
+		$filters['sqlsort'] = $filters['sort'];
+
+		$sortFound = false;
+		if ($filters['sort'] == 'name')
+		{
+			$sortFound = true;
+			// TODO: update for solr
+			$filters['sqlsort'] = 'surname';
+		}
+
+		// Process incoming filters
+		foreach ($q as $key => $val)
+		{
+			if (!is_int($key))
+			{
+				if (!$val)
+				{
+					continue;
+				}
+
+				$val = array(
+					'field'    => $key,
+					'operator' => 'e',
+					'value'    => $val
+				);
+			}
+
+			if (!isset($val['field']) || !isset($val['operator']) || !isset($val['value']))
+			{
+				continue;
+			}
+
+			$val['field']          = preg_replace('/[^0-9a-zA-z\-_\.]/i', '', $val['field']);
+			$val['o']              = Filters::translateOperator($val['operator']);
+			$val['human_operator'] = Filters::mapOperator($val['o']);
+			$val['human_value']    = $val['value'];
+
+			foreach ($fields as $field)
+			{
+				if ($field->get('name') != $val['field'])
+				{
+					continue;
+				}
+
+				$val['human_field'] = $field->get('label');
+
+				$options = $field->options;
+
+				// Text-based field
+				if ($options->count() <= 0)
+				{
+					continue;
+				}
+
+				// Multi-value field (checkboxes)
+				if (is_array($val['value']))
+				{
+					$val['human_value'] = array();
+					foreach ($val['value'] as $value)
+					{
+						$multi = $val;
+						$multi['value'] = $value;
+						$multi['human_value'] = $value;
+						foreach ($field->options as $option)
+						{
+							if ($option->get('value') == $value)
+							{
+								//$multi['human_value'] = $option->get('label');
+								$val['human_value'][] = $option->get('label');
+								break;
+							}
+						}
+						//$filters['q'][] = $multi;
+					}
+				}
+				// Single-value field (select list)
+				else
+				{
+					foreach ($field->options as $option)
+					{
+						if ($option->get('value') == $val['value'])
+						{
+							$val['human_value'] = $option->get('label');
+						}
+					}
+				}
+			}
+
+			// No associated profile field was found
+			if (!isset($val['human_field']))// || is_array($val['value']))
+			{
+				continue;
+			}
+
+			$filters['q'][] = $val;
+		}
+
+		// Distil down the results to only unique filters
+		$filters['q'] = array_map('unserialize', array_unique(array_map('serialize', $filters['q'])));
+
+		// Build solr query: retrieve all solr-indexed items of type member
+		// this is adapted from the com_search site controller displayTask() function
+
+		// Honestly all we need to do here is:
+		// This line replaces the block of commented code below
+		$query->addFilter('Type', 'hubtype:member', 'root_type');
+
+		/*
+		// Find the Id for the Members component in the solr search table:
+		$membersComponentId = SearchComponent::whereEquals('name','members')->rows()->key();
+
+		// Retrieve Members object from all solr-indexed component types
+		// TODO: if Members is not indexed, provide some kind of graceful message and exit? Or turn off the search here?
+		$membersComponent = SearchComponent::all()->whereEquals('state', SearchComponent::STATE_INDEXED)
+											->whereEquals('id', $membersComponentId);
+
+		// Does this even do anything??
+		foreach ($membersComponent->filters as $filter)
+		{
+			// members does not have multifacet, so ignore here:
+			//if (method_exists($filter, 'addCounts'))
+			//{
+			//	$filter->addCounts($multifacet);
+			//}
+			if (method_exists($filter, 'applyFilters') && !empty(array_filter($filters)))
+			{
+				$filter->applyFilters($query, $filters);
+			}
+		}
+
+		// this call uses membercomponent.php and then appends the namespace to give: 'hubtype:member';
+		// todo: should not need to append namespace!
+		$memberQuery = $membersComponent->getSearchQuery('hubtype') . $memberNamespace;
+		$query->addFilter('Type', $memberQuery, 'root_type');
+		*/
+
+		// Apply any filters found in $q to the solr query. 
+		// Here we are searching on the specific fields called for.
+		// Such as, searching for bio in the description field of the solr index.
+		// TODO if we change our indexing: update me.
+		if (sizeof($q) > 0)
+		{
+			foreach ($q as $key => $val)
+			{
+				if (!is_array($val) && $val != "") {
+					switch ($key)
+					{
+						// if biography or organization search specified, search 'description'
+						// our solr index has these fields concatenated as "description"
+						case "bio":
+						case "organization":
+							$subQuery = "description:".$val;
+							$query->addFilter($key, $subQuery);
+							break;
+						// default case: search all fields
+						default:
+							$query->addFilter($key, $val);
+							break;							
+					}
+				}
+			}
+		}
+				
+		// Apply access permissions to the query:
+		// Given our current indexing implementation, solr cannot sort by name as it is multivalued per our current indexing scheme.
+		// Instead we sort below when retrieving Members based on their ids.
+		$query->restrictAccess(); //->limit($limit)->start($start); //->sortBy($filters['sort'], $filters['sort_Dir']);
+
+		// Finally, if we have a search phrase, apply it:
+		if ($filters['search'] != "")
+		{
+			$query->query($filters['search']);
+		}
+
+		// Set the fields to return from solr. We retrieve the rest of the Member object below.
+		$toReturn = array("id, title, access_level, owner");
+		$query->fields($toReturn);
+	
+		// Run the solr query
+		try
+		{
+			$query = $query->run();
+		}
+		catch (\Solarium\Exception\HttpException $e)
+		{
+			$query->query('')->limit($limit)->start($start)->run();
+			\Notify::warning(Lang::txt('COM_SEARCH_MALFORMED_QUERY'));
+		}
+
+		// Retrieve the solr search results
+		$results  = $query->getResults();
+		// not presently in use but handy for debugging
+		//$numFound = $query->getNumFound();
+
+		// Convert the solr search results into the format expected by the Members browse view:
+		$userIds = array();
+		foreach ($results as $result)
+		{
+			// Pluck the $user_id from the solr results, to acquire the Member object:
+			// TODO: Could use the id field and remove the 'member-' part?
+			$userIds[] = $result['owner'][0];
+			//$userIds[] = explode('-',$result['id'])[1]
+		}
+		
+		// Prepare a Hubzero\Database\Rows object containing Members from result set
+		// Create a paginator and enforce ordering using the Members object.
+		// (Used to include search restrictions on block, activation, and approved. 
+		//  But, the latter seems unnecessary in our current implementation, 
+		// as these blocked/unactivated/unapproved Members do not appear to be indexed by solr)
+		$rows = Member::whereIn('id', $userIds)						
+						->paginated('limitstart', 'limit')
+						->ordered('sort', 'sort_Dir')
+						->rows();
+						//->whereEquals('.block', 0)
+						//->where('.activation', '>', 0)
+						//->where('.approved', '>', 0)
+
+		// Set the page title
+		$title  = Lang::txt('COM_MEMBERS');
+		$title .= ($this->_task) ? ': ' . Lang::txt(strtoupper($this->_task)) : '';
+
+		Document::setTitle($title);
+
+		// Set the document pathway
+		if (Pathway::count() <= 0)
+		{
+			Pathway::append(
+				Lang::txt(strtoupper($this->_name)),
+				'index.php?option=' . $this->_option
+			);
+		}
+		// Add to the pathway
+		Pathway::append(
+			Lang::txt(strtoupper($this->_task)),
+			'index.php?option=' . $this->_option . '&task=' . $this->_task
+		);
+
+		// Get stats
+		// JMS TODO: where do we use this?
+		if (!($stats = Cache::get('members.stats')))
+		{
+			$stats = $this->stats();
+
+			Cache::put('members.stats', $stats, intval($this->config->get('cache_time', 15)));
+		}
+
+		// Instantiate the view
+		$this->view
+			->set('config', $this->config)
+			->set('fields', $fields)
+			->set('filters', $filters)
+			->set('title', $title)
+			->set('rows', $rows)
+			->set('past_day_members', $stats->past_day_members)
+			->set('past_month_members', $stats->past_month_members)
+			->set('total_members', $stats->total_members)
+			->set('total_public_members', $stats->total_public_members)
+			->display();
+	}
+
+	/**
+	 * Display a list of members
+	 *
+	 * @return  void
+	 */
+	public function browseOldTask()
 	{
 		// Get all the fields we can use on this page
 		$fields = Field::all()
@@ -582,8 +920,10 @@ class Profiles extends SiteController
 			->rows();
 
 		// Set the page title
+		// testing JMS
 		$title  = Lang::txt('COM_MEMBERS');
 		$title .= ($this->_task) ? ': ' . Lang::txt(strtoupper($this->_task)) : '';
+		$title  = Lang::txt('COM_MEMBERS'. ' Original Browse');
 
 		Document::setTitle($title);
 

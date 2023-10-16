@@ -156,6 +156,9 @@ class Router extends Base
 				case 'browse':
 					$vars['task'] = 'browse';
 				break;
+				case 'browseOld':
+					$vars['task'] = 'browseOld';
+				break;
 				default:
 					if (isset($segments[0][0]) && $segments[0][0] == 'n')
 					{
