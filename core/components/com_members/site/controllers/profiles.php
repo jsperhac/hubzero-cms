@@ -517,6 +517,12 @@ class Profiles extends SiteController
 			$query->query($filters['search']);
 		}
 
+		// Apply the sorting for Solr
+		if ($filters['sort'] != '' && $filters['sort_Dir'] != '')
+		{
+			$query = $query->sortBy($filters['sort'], $filters['sort_Dir']);
+		}
+
 		// Set the fields to return from solr. We retrieve the rest of the Member object below.
 		$toReturn = array("id, title, access_level, owner");
 		$query->fields($toReturn);
